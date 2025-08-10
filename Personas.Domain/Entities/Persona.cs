@@ -1,0 +1,18 @@
+﻿using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Text;
+using System.Threading.Tasks;
+
+namespace Personas.Domain.Entities
+{
+    public class Persona
+    {
+        public int Id { get; set; }
+        public string Cedula { get; set; } = string.Empty;
+        public string Nombres { get; set; } = string.Empty;
+        public int Edad { get; set; } = 0;
+        public string Direccion { get; set; } = string.Empty;
+        public bool Estado { get; set; } = true;
+    }
+}
