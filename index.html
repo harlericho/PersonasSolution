@@ -1,0 +1,347 @@
+<!DOCTYPE html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <title>Consumo de API Personas</title>
+    <link
+      rel="stylesheet"
+      href="https://cdn.jsdelivr.net/npm/bulma@0.9.4/css/bulma.min.css"
+    />
+  </head>
+  <body>
+    <section class="section">
+      <div class="container">
+        <h1 class="title is-3 has-text-centered">Listado de Personas</h1>
+        <div class="has-text-centered mb-5">
+          <button class="button is-link" onclick="cargarPersonas()">
+            Cargar Personas
+          </button>
+        </div>
+
+        <div class="box mb-5">
+          <h2 class="title is-4">Crear Persona</h2>
+          <form id="formPersona" onsubmit="crearPersona(event)">
+            <div class="columns">
+              <div class="column">
+                <div class="field">
+                  <label class="label">Cédula</label>
+                  <div class="control">
+                    <input
+                      class="input"
+                      type="text"
+                      name="cedula"
+                      placeholder="Cédula"
+                      required
+                    />
+                  </div>
+                </div>
+              </div>
+              <div class="column">
+                <div class="field">
+                  <label class="label">Nombres</label>
+                  <div class="control">
+                    <input
+                      class="input"
+                      type="text"
+                      name="nombres"
+                      placeholder="Nombres"
+                      required
+                    />
+                  </div>
+                </div>
+              </div>
+              <div class="column">
+                <div class="field">
+                  <label class="label">Edad</label>
+                  <div class="control">
+                    <input
+                      class="input"
+                      type="number"
+                      name="edad"
+                      placeholder="Edad"
+                      required
+                    />
+                  </div>
+                </div>
+              </div>
+              <div class="column">
+                <div class="field">
+                  <label class="label">Dirección</label>
+                  <div class="control">
+                    <input
+                      class="input"
+                      type="text"
+                      name="direccion"
+                      placeholder="Dirección"
+                      required
+                    />
+                  </div>
+                </div>
+              </div>
+              <div class="column is-narrow">
+                <div class="field">
+                  <label class="checkbox mt-5">
+                    <input type="checkbox" name="estado" /> Activo
+                  </label>
+                </div>
+              </div>
+            </div>
+            <div class="field is-grouped is-grouped-right">
+              <div class="control">
+                <button class="button is-success" type="submit">Crear</button>
+              </div>
+            </div>
+          </form>
+        </div>
+
+        <div class="box">
+          <h2 class="title is-4">Personas</h2>
+          <div class="table-container">
+            <table
+              class="table is-striped is-hoverable is-fullwidth"
+              id="tablaPersonas"
+            >
+              <thead>
+                <tr>
+                  <th>ID</th>
+                  <th>Cedula</th>
+                  <th>Nombres</th>
+                  <th>Edad</th>
+                  <th>Direccion</th>
+                  <th>Estado</th>
+                  <th>Acciones</th>
+                </tr>
+              </thead>
+              <tbody></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </section>
+    <script>
+      const API_BASE = "https://localhost:7258/api/Personas";
+
+      async function cargarPersonas() {
+        const response = await fetch(API_BASE);
+        const personas = await response.json();
+        const tbody = document
+          .getElementById("tablaPersonas")
+          .getElementsByTagName("tbody")[0];
+        tbody.innerHTML = "";
+        personas.forEach((persona) => {
+          const fila = document.createElement("tr");
+          const estadoBadge = persona.estado
+            ? '<span class="tag is-success">Activo</span>'
+            : '<span class="tag is-danger">Inactivo</span>';
+          fila.innerHTML = `
+            <td>${persona.id}</td>
+            <td>${persona.cedula}</td>
+            <td>${persona.nombres}</td>
+            <td>${persona.edad}</td>
+            <td>${persona.direccion}</td>
+            <td>${estadoBadge}</td>
+            <td>
+              <button class="button is-small is-warning" onclick="mostrarEditarPersona(${persona.id})">Editar</button>
+              <button class="button is-small is-danger" onclick="eliminarPersona(${persona.id})">Eliminar</button>
+            </td>
+          `;
+          tbody.appendChild(fila);
+        });
+      }
+
+      async function crearPersona(event) {
+        event.preventDefault();
+        const form = document.getElementById("formPersona");
+        // Limpiar mensajes previos
+        ["cedula", "nombres", "edad", "direccion"].forEach((campo) => {
+          const msg = document.getElementById(`msg_${campo}`);
+          if (msg) msg.remove();
+        });
+
+        const data = {
+          cedula: form.cedula.value,
+          nombres: form.nombres.value,
+          edad: parseInt(form.edad.value),
+          direccion: form.direccion.value,
+          estado: form.estado.checked,
+        };
+        try {
+          const response = await fetch(API_BASE, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(data),
+          });
+          if (!response.ok) {
+            const errorData = await response.json();
+            if (errorData.errors) {
+              Object.entries(errorData.errors).forEach(([campo, mensajes]) => {
+                const input = form[campo.toLowerCase()];
+                if (input) {
+                  const msg = document.createElement("p");
+                  msg.id = `msg_${campo.toLowerCase()}`;
+                  msg.className = "help is-danger";
+                  msg.textContent = mensajes.join(". ");
+                  input.parentNode.appendChild(msg);
+                }
+              });
+            } else {
+              alert(errorData.title || "Error al crear persona");
+            }
+            return;
+          }
+          form.reset();
+          cargarPersonas();
+        } catch (err) {
+          alert("Error de red o servidor");
+        }
+      }
+
+      async function eliminarPersona(id) {
+        if (!confirm("¿Seguro que deseas eliminar esta persona?")) return;
+        await fetch(`${API_BASE}/${id}`, {
+          method: "DELETE",
+        });
+        cargarPersonas();
+      }
+
+      function mostrarEditarPersona(id) {
+        // Buscar la persona actual y mostrar un formulario de edición
+        fetch(`${API_BASE}/${id}`)
+          .then((res) => res.json())
+          .then((persona) => {
+            const formHtml = `
+              <div class="box">
+                <h2 class="title is-4">Editar Persona</h2>
+                <form id="formEditarPersona" onsubmit="editarPersona(event, ${id})">
+                  <div class="columns">
+                    <div class="column">
+                      <div class="field">
+                        <label class="label">Cédula</label>
+                        <div class="control">
+                          <input class="input" type="text" name="cedula" value="${
+                            persona.cedula
+                          }" required />
+                        </div>
+                      </div>
+                    </div>
+                    <div class="column">
+                      <div class="field">
+                        <label class="label">Nombres</label>
+                        <div class="control">
+                          <input class="input" type="text" name="nombres" value="${
+                            persona.nombres
+                          }" required />
+                        </div>
+                      </div>
+                    </div>
+                    <div class="column">
+                      <div class="field">
+                        <label class="label">Edad</label>
+                        <div class="control">
+                          <input class="input" type="number" name="edad" value="${
+                            persona.edad
+                          }" required />
+                        </div>
+                      </div>
+                    </div>
+                    <div class="column">
+                      <div class="field">
+                        <label class="label">Dirección</label>
+                        <div class="control">
+                          <input class="input" type="text" name="direccion" value="${
+                            persona.direccion
+                          }" required />
+                        </div>
+                      </div>
+                    </div>
+                    <div class="column is-narrow">
+                      <div class="field">
+                        <label class="checkbox mt-5">
+                          <input type="checkbox" name="estado" ${
+                            persona.estado ? "checked" : ""
+                          }/> Activo
+                        </label>
+                      </div>
+                    </div>
+                  </div>
+                  <div class="field is-grouped is-grouped-right">
+                    <div class="control">
+                      <button class="button is-warning" type="submit">Actualizar</button>
+                    </div>
+                    <div class="control">
+                      <button class="button is-light" type="button" onclick="cerrarEditarPersona()">Cancelar</button>
+                    </div>
+                  </div>
+                </form>
+              </div>
+            `;
+            let div = document.getElementById("editarPersonaDiv");
+            if (!div) {
+              div = document.createElement("div");
+              div.id = "editarPersonaDiv";
+              // Busca el contenedor de la tabla (el último .box)
+              const tablaBox = document.querySelector(".box:last-of-type");
+              tablaBox.parentNode.insertBefore(div, tablaBox);
+            }
+            div.innerHTML = formHtml;
+          });
+      }
+
+      async function editarPersona(event, id) {
+        event.preventDefault();
+        const form = document.getElementById("formEditarPersona");
+        // Limpiar mensajes previos
+        ["cedula", "nombres", "edad", "direccion"].forEach((campo) => {
+          const msg = document.getElementById(`editmsg_${campo}`);
+          if (msg) msg.remove();
+        });
+
+        const data = {
+          id: id,
+          cedula: form.cedula.value,
+          nombres: form.nombres.value,
+          edad: parseInt(form.edad.value),
+          direccion: form.direccion.value,
+          estado: form.estado.checked,
+        };
+        try {
+          const response = await fetch(API_BASE, {
+            method: "PUT",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(data),
+          });
+          if (!response.ok) {
+            const errorData = await response.json();
+            if (errorData.errors) {
+              Object.entries(errorData.errors).forEach(([campo, mensajes]) => {
+                const input = form[campo.toLowerCase()];
+                if (input) {
+                  const msg = document.createElement("p");
+                  msg.id = `editmsg_${campo.toLowerCase()}`;
+                  msg.className = "help is-danger";
+                  msg.textContent = mensajes.join(". ");
+                  input.parentNode.appendChild(msg);
+                }
+              });
+            } else {
+              alert(errorData.title || "Error al actualizar persona");
+            }
+            return;
+          }
+          cerrarEditarPersona();
+          cargarPersonas();
+        } catch (err) {
+          alert("Error de red o servidor");
+        }
+      }
+
+      function cerrarEditarPersona() {
+        const div = document.getElementById("editarPersonaDiv");
+        if (div) div.remove();
+      }
+
+      // Cargar personas al inicio
+      window.onload = cargarPersonas;
+    </script>
+  </body>
+</html>

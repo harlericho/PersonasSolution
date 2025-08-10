@@ -1,4 +1,4 @@
-using FluentValidation;
+﻿using FluentValidation;
 using FluentValidation.AspNetCore;
 using Microsoft.EntityFrameworkCore;
 using Personas.Application.DTOs;
@@ -12,14 +12,34 @@ using Personas.Infrastructure.Repositories;
 
 var builder = WebApplication.CreateBuilder(args);
 
+
+// Define una política de CORS
+var MyAllowSpecificOrigins = "_myAllowSpecificOrigins";
+
+// Registrar CORS
+builder.Services.AddCors(options =>
+{
+    options.AddPolicy(name: MyAllowSpecificOrigins,
+        policy =>
+        {
+            policy.WithOrigins(
+                "http://127.0.0.1:5500",  // Live Server
+                "http://localhost:5500"   // por si usas localhost
+            )
+            .AllowAnyHeader()
+            .AllowAnyMethod();
+        });
+});
+
+
 // FluentValidation
-// Registrar validaciones autom�ticas en backend
+// Registrar validaciones automáticas en backend
 builder.Services.AddFluentValidationAutoValidation();
 
 // Registrar validaciones para adaptadores cliente (ej. jQuery Validation)
 builder.Services.AddFluentValidationClientsideAdapters();
 
-// Registrar tu validador expl�citamente (opcional si usas RegisterValidatorsFromAssembly)
+// Registrar tu validador explícitamente (opcional si usas RegisterValidatorsFromAssembly)
 builder.Services.AddScoped<IValidator<PersonaCreateDto>, PersonaCreateValidator>();
 builder.Services.AddScoped<IValidator<PersonaUpdateDto>, PersonaUpdateValidator>();
 
@@ -52,6 +72,9 @@ if (app.Environment.IsDevelopment())
     app.UseSwagger();
     app.UseSwaggerUI();
 }
+
+// Aquí activas CORS
+app.UseCors(MyAllowSpecificOrigins);
 
 app.UseHttpsRedirection();
 
